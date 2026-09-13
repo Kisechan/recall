@@ -24,14 +24,16 @@ pub(crate) enum Category {
     Capture,
     Appearance,
     Shell,
+    Retention,
 }
 
 impl Category {
-    pub(crate) const ALL: [Self; 4] = [
+    pub(crate) const ALL: [Self; 5] = [
         Self::Keybinding,
         Self::Capture,
         Self::Appearance,
         Self::Shell,
+        Self::Retention,
     ];
 
     pub(crate) fn label(self) -> &'static str {
@@ -40,6 +42,7 @@ impl Category {
             Self::Capture => "Capture rules",
             Self::Appearance => "Appearance",
             Self::Shell => "Shell integration",
+            Self::Retention => "Retention",
         }
     }
 
@@ -49,6 +52,7 @@ impl Category {
             Self::Capture => 4,
             Self::Appearance => 3,
             Self::Shell => 7,
+            Self::Retention => 2,
         }
     }
 }
@@ -63,6 +67,9 @@ pub(crate) enum RuleTarget {
 pub(crate) enum Modal {
     KeyRecorder {
         chords: Vec<String>,
+    },
+    RetentionEditor {
+        input: String,
     },
     DateEditor {
         input: String,
@@ -272,6 +279,27 @@ impl App {
     }
 
     fn activate_selected(&mut self) {
+        if self.current_category() == Category::Retention {
+            if self.selected == 0 {
+                self.modal = Some(Modal::RetentionEditor {
+                    input: self.config.retention.retention_days.to_string(),
+                });
+                self.status = None;
+            } else {
+                match self.store.set_bool(
+                    "retention",
+                    "auto_prune",
+                    !self.config.retention.auto_prune,
+                ) {
+                    Ok(config) => {
+                        self.config = config;
+                        self.set_saved("auto prune updated".to_string());
+                    }
+                    Err(err) => self.set_error(format!("failed to save auto prune: {err}")),
+                }
+            }
+            return;
+        }
         if self.current_category() == Category::Keybinding {
             self.modal = Some(Modal::KeyRecorder { chords: Vec::new() });
             self.status = None;
@@ -437,6 +465,43 @@ impl App {
                         self.modal = Some(modal);
                     }
                 },
+            },
+            Modal::RetentionEditor { input } => match key.code {
+                KeyCode::Esc => {}
+                KeyCode::Enter => match input.parse::<u32>() {
+                    Ok(days) => {
+                        match self
+                            .store
+                            .set_integer("retention", "retention_days", i64::from(days))
+                        {
+                            Ok(config) => {
+                                self.config = config;
+                                self.set_saved("output retention updated".to_string());
+                            }
+                            Err(err) => {
+                                self.set_error(format!("failed to save output retention: {err}"));
+                                self.modal = Some(modal);
+                            }
+                        }
+                    }
+                    Err(_) => {
+                        self.set_error("enter a whole number from 0 to 4294967295".to_string());
+                        self.modal = Some(modal);
+                    }
+                },
+                KeyCode::Backspace => {
+                    input.pop();
+                    self.modal = Some(modal);
+                }
+                KeyCode::Char(character)
+                    if !key
+                        .modifiers
+                        .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) =>
+                {
+                    input.push(character);
+                    self.modal = Some(modal);
+                }
+                _ => self.modal = Some(modal),
             },
             Modal::DateEditor { input } => match key.code {
                 KeyCode::Esc => {}
@@ -790,14 +855,59 @@ mod tests {
     }
 
     #[test]
+    fn retention_edits_validate_and_persist_without_pruning() {
+        let (mut app, path, dir) = persisted_app("retention");
+        app.category = Category::ALL
+            .iter()
+            .position(|c| *c == Category::Retention)
+            .unwrap();
+        for days in ["7", "90", "0", "4294967295"] {
+            app.selected = 0;
+            app.handle_key(key(KeyCode::Enter));
+            assert!(matches!(app.modal, Some(Modal::RetentionEditor { .. })));
+            app.modal = Some(Modal::RetentionEditor {
+                input: days.to_string(),
+            });
+            app.handle_key(key(KeyCode::Enter));
+            assert!(app.modal.is_none());
+            assert_eq!(
+                Config::load_from(&path).unwrap().retention.retention_days,
+                days.parse::<u32>().unwrap()
+            );
+        }
+        let before = std::fs::read(&path).unwrap();
+        for input in ["", "-1", "1.5", "abc", "4294967296"] {
+            app.modal = Some(Modal::RetentionEditor {
+                input: input.to_string(),
+            });
+            app.handle_key(key(KeyCode::Enter));
+            assert!(app.status_is_error);
+            assert!(app.modal.is_some());
+            app.handle_key(key(KeyCode::Esc));
+            assert_eq!(std::fs::read(&path).unwrap(), before);
+        }
+        app.selected = 1;
+        app.handle_key(key(KeyCode::Char(' ')));
+        assert!(!Config::load_from(&path).unwrap().retention.auto_prune);
+        app.handle_key(key(KeyCode::Enter));
+        assert!(Config::load_from(&path).unwrap().retention.auto_prune);
+        std::fs::write(&path, "invalid = [").unwrap();
+        app.handle_key(key(KeyCode::Enter));
+        assert!(app.status_is_error);
+        assert!(app.config.retention.auto_prune);
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "invalid = [");
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
     fn navigates_categories_and_rows() {
         let mut app = App::new(Config::default());
         app.category = 0;
         app.selected = 0;
         app.handle_key(key(KeyCode::BackTab));
-        assert_eq!(app.current_category(), Category::Shell);
+        assert_eq!(app.current_category(), Category::Retention);
         app.handle_key(key(KeyCode::Up));
-        assert_eq!(app.selected, 6);
+        assert_eq!(app.selected, 1);
         app.handle_key(key(KeyCode::Tab));
         assert_eq!(app.current_category(), Category::Keybinding);
         assert_eq!(app.selected, 0);

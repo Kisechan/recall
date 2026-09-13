@@ -144,6 +144,26 @@ fn setting_rows(app: &App) -> Vec<(String, String)> {
                 ),
             ),
         ],
+        Category::Retention => vec![
+            (
+                "Output retention".to_string(),
+                if app.config.retention.retention_days == 0 {
+                    "Forever (expiry disabled)".to_string()
+                } else {
+                    format!(
+                        "{} days · Enter to edit",
+                        app.config.retention.retention_days
+                    )
+                },
+            ),
+            (
+                "Auto prune".to_string(),
+                format!(
+                    "{} · clean expired output when history opens; commands stay",
+                    on_off(app.config.retention.auto_prune)
+                ),
+            ),
+        ],
         Category::Shell => vec![
             ("Detected shell".to_string(), app.shell_name.clone()),
             (
@@ -277,6 +297,14 @@ fn draw_modal(frame: &mut Frame, modal: &Modal) {
                 ))
                 .block(Block::bordered().title(" Record search shortcut "))
                 .wrap(Wrap { trim: false }),
+                area,
+            );
+        }
+        Modal::RetentionEditor { input } => {
+            frame.render_widget(
+                Paragraph::new(format!("{input}\n\nDays to keep output; 0 keeps it forever.\nAuto prune applies when history opens.\nCommand records are retained.\n\nEnter save · Esc cancel"))
+                    .block(Block::bordered().title(" Output retention "))
+                    .wrap(Wrap { trim: false }),
                 area,
             );
         }

@@ -8,9 +8,6 @@ use crate::config::{Config, ConfigStore};
 use crate::db::{Db, queries};
 use crate::model::Block;
 
-/// Maximum number of results loaded into the list.
-const RESULT_LIMIT: usize = 2000;
-
 /// Database key under which the user's preferred list pane width is stored.
 const LIST_WIDTH_SETTING: &str = "ui.list_width_pct";
 /// Percentage points the split moves per key press.
@@ -102,7 +99,7 @@ impl App {
     }
 
     pub fn refresh(&mut self) {
-        match queries::search(&self.db.conn, &self.query, RESULT_LIMIT) {
+        match queries::search(&self.db.conn, &self.query, None) {
             Ok(results) => {
                 self.results = results;
                 if self.selected >= self.results.len() {
@@ -514,6 +511,27 @@ mod tests {
         };
         app.refresh();
         (app, copied, dir)
+    }
+
+    #[test]
+    fn browsing_and_search_include_history_beyond_2000_results() {
+        let blocks: Vec<_> = (0..2005)
+            .map(|i| block(&i.to_string(), "echo shared", "xy searchable output", i))
+            .collect();
+        let (mut app, _, dir) = test_app(&blocks);
+        for query in ["", "shared", "searchable", "xy"] {
+            app.query = query.to_string();
+            app.refresh();
+            assert_eq!(app.results.len(), blocks.len(), "{query}");
+            assert_eq!(app.results.last().unwrap().id, "0");
+            app.move_selection(2004);
+            assert_eq!(app.detail.as_ref().unwrap().id, "0");
+        }
+        assert_eq!(
+            queries::search(&app.db.conn, "shared", 10).unwrap().len(),
+            10
+        );
+        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
