@@ -267,7 +267,10 @@ pub fn prune(conn: &Connection, days: u32, now_ns: i64) -> Result<usize> {
     if days == 0 {
         return Ok(0);
     }
-    let cutoff = now_ns - (days as i64) * 86_400 * 1_000_000_000;
+    let cutoff = i128::from(now_ns) - i128::from(days) * 86_400 * 1_000_000_000;
+    let Ok(cutoff) = i64::try_from(cutoff) else {
+        return Ok(0);
+    };
     let affected = conn.execute(
         "UPDATE blocks
             SET output = NULL, output_codec = NULL, output_text = NULL
@@ -302,6 +305,23 @@ mod tests {
             created_at: started_at,
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn retention_larger_than_timestamp_range_keeps_output() {
+        let db = crate::db::Db::open_in_memory().unwrap();
+        let block = Block {
+            id: "ancient".to_string(),
+            started_at: i64::MIN,
+            output: Some(b"keep me".to_vec()),
+            ..Block::default()
+        };
+        insert(&db.conn, &block).unwrap();
+        assert_eq!(prune(&db.conn, u32::MAX, crate::util::now_ns()).unwrap(), 0);
+        assert_eq!(
+            get(&db.conn, "ancient").unwrap().unwrap().output,
+            block.output
+        );
     }
 
     #[test]
