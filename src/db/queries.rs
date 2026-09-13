@@ -204,7 +204,7 @@ fn fts_search(conn: &Connection, match_expr: &str, limit: Option<usize>) -> Resu
             .join(", ")
     );
     let mut stmt = conn.prepare(&sql)?;
-    let rows = stmt.query_map(params![match_expr, sql_limit(limit.into())], |row| {
+    let rows = stmt.query_map(params![match_expr, sql_limit(limit)], |row| {
         row_to_block(row, false)
     })?;
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
@@ -222,7 +222,7 @@ fn like_search(conn: &Connection, query: &str, limit: Option<usize>) -> Result<V
          ORDER BY started_at DESC LIMIT ?2"
     );
     let mut stmt = conn.prepare(&sql)?;
-    let rows = stmt.query_map(params![pattern, sql_limit(limit.into())], |row| {
+    let rows = stmt.query_map(params![pattern, sql_limit(limit)], |row| {
         row_to_block(row, false)
     })?;
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)

@@ -69,7 +69,11 @@ fn config_tui_records_a_key_and_saves_a_toggle() {
     });
 
     require_output(&output, "Categories", &mut child);
-    write_input(&writer, b"\t\r\x1bt\r\t q");
+    write_input(&writer, b"\t\t\r\x1bt\r\t ");
+
+    write_input(&writer, b"\t\t\t\r");
+    require_output(&output, "forever.", &mut child);
+    write_input(&writer, b"\x7f\x7f0\r\x1b[B q");
 
     let deadline = Instant::now() + Duration::from_secs(10);
     let status = loop {
@@ -92,6 +96,9 @@ fn config_tui_records_a_key_and_saves_a_toggle() {
     let config: toml::Value = toml::from_str(&saved).unwrap();
     assert_eq!(config["ui"]["search_key"].as_str(), Some("alt-t"));
     assert_eq!(config["proxy"]["secrets_filter"].as_bool(), Some(false));
+    assert_eq!(config["retention"]["retention_days"].as_integer(), Some(0));
+    assert_eq!(config["retention"]["auto_prune"].as_bool(), Some(false));
+    assert!(output_text(&output).contains("\x1b[?1049l"));
     assert!(saved.contains("# keep"));
     let _ = std::fs::remove_dir_all(test_dir);
 }
