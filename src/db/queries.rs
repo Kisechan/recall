@@ -121,11 +121,21 @@ fn insert_block(conn: &Connection, block: &Block) -> Result<()> {
     Ok(())
 }
 
+// SQLite treats a negative LIMIT as unlimited.
+fn sql_limit(limit: Option<usize>) -> i64 {
+    limit
+        .map(|value| i64::try_from(value).unwrap_or(i64::MAX))
+        .unwrap_or(-1)
+}
+
 /// Most recent blocks (without full output; preview comes from the projection).
-pub fn recent(conn: &Connection, limit: usize) -> Result<Vec<Block>> {
+/// Pass None to load all records.
+pub fn recent(conn: &Connection, limit: impl Into<Option<usize>>) -> Result<Vec<Block>> {
     let sql = format!("SELECT {COLUMNS} FROM blocks ORDER BY started_at DESC LIMIT ?1");
     let mut stmt = conn.prepare(&sql)?;
-    let rows = stmt.query_map(params![limit as i64], |row| row_to_block(row, false))?;
+    let rows = stmt.query_map(params![sql_limit(limit.into())], |row| {
+        row_to_block(row, false)
+    })?;
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
 }
 
@@ -141,8 +151,13 @@ pub fn get(conn: &Connection, id: &str) -> Result<Option<Block>> {
 }
 
 /// Search command text and output. Falls back to `LIKE` when the FTS query is
-/// not usable (short terms, CJK < 3 chars, or syntax issues).
-pub fn search(conn: &Connection, query: &str, limit: usize) -> Result<Vec<Block>> {
+/// not usable (short terms, CJK < 3 chars, or syntax issues). None means no limit.
+pub fn search(
+    conn: &Connection,
+    query: &str,
+    limit: impl Into<Option<usize>>,
+) -> Result<Vec<Block>> {
+    let limit = limit.into();
     let query = query.trim();
     if query.is_empty() {
         return recent(conn, limit);
@@ -176,7 +191,7 @@ fn fts_match_expr(query: &str) -> Option<String> {
     )
 }
 
-fn fts_search(conn: &Connection, match_expr: &str, limit: usize) -> Result<Vec<Block>> {
+fn fts_search(conn: &Connection, match_expr: &str, limit: Option<usize>) -> Result<Vec<Block>> {
     let sql = format!(
         "SELECT {} FROM blocks b
          JOIN blocks_fts f ON f.rowid = b.rowid
@@ -189,13 +204,13 @@ fn fts_search(conn: &Connection, match_expr: &str, limit: usize) -> Result<Vec<B
             .join(", ")
     );
     let mut stmt = conn.prepare(&sql)?;
-    let rows = stmt.query_map(params![match_expr, limit as i64], |row| {
+    let rows = stmt.query_map(params![match_expr, sql_limit(limit.into())], |row| {
         row_to_block(row, false)
     })?;
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
 }
 
-fn like_search(conn: &Connection, query: &str, limit: usize) -> Result<Vec<Block>> {
+fn like_search(conn: &Connection, query: &str, limit: Option<usize>) -> Result<Vec<Block>> {
     let escaped = query
         .replace('\\', "\\\\")
         .replace('%', "\\%")
@@ -207,7 +222,7 @@ fn like_search(conn: &Connection, query: &str, limit: usize) -> Result<Vec<Block
          ORDER BY started_at DESC LIMIT ?2"
     );
     let mut stmt = conn.prepare(&sql)?;
-    let rows = stmt.query_map(params![pattern, limit as i64], |row| {
+    let rows = stmt.query_map(params![pattern, sql_limit(limit.into())], |row| {
         row_to_block(row, false)
     })?;
     Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
