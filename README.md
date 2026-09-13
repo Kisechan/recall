@@ -326,6 +326,12 @@ integration. Changes are validated and saved atomically as you make them;
 existing TOML comments and unrelated settings are retained. Shortcut changes
 take effect in a new shell.
 
+The history TUI loads all matching records without a result-count cap.
+In **Retention**, press Enter on **Output retention** to enter a number of days
+(0 keeps output forever), and toggle **Auto prune** with Space or Enter.
+Auto prune removes expired output when the history TUI opens; command records
+remain. Saving these settings does not run cleanup immediately.
+
 - `Tab` / `Shift+Tab`: change category
 - `Up` / `Down`: choose a setting
 - `Left` / `Right`: adjust display values or timestamp presets
