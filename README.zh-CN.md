@@ -23,7 +23,7 @@ TUI 中浏览这些历史——每次执行都是一个独立的 *block*。它�
 
 ### 一行安装（推荐）
 
-```sh
+```shell
 curl -fsSL https://raw.githubusercontent.com/wendaining/recall/master/install.sh | sh
 ```
 
@@ -35,6 +35,9 @@ curl -fsSL https://raw.githubusercontent.com/wendaining/recall/master/install.sh
 - 在正确位置创建默认 `config.toml`，已有配置不会被覆盖；
 - 检测已有 bash、zsh、fish 与 atuin 历史，并逐项询问是否导入；
 - 在新的交互式 shell 中自动启动 PTY 代理，无需修改终端模拟器设置。
+
+安装器会在此过程中运行 `recall setup <检测到的 shell>`。完成后打开新终端即可；
+源码构建与自定义安装通过手动运行相同的 setup 命令完成集成。
 
 默认会自动捕获输出。若只需要搜索快捷键和元数据，可设置
 `RECALL_PROXY_SETUP=hooks`，需要捕获输出时再运行 `recall shell`。旧值 `shell`
@@ -56,16 +59,20 @@ irm https://raw.githubusercontent.com/wendaining/recall/master/install.ps1 | iex
 
 ### 从源码构建
 
-```sh
+```shell
 cargo build --release
-install -Dm755 target/release/recall ~/.local/bin/recall      # Linux/macOS
+mkdir -p ~/.local/bin
+install -m 755 target/release/recall ~/.local/bin/recall
+recall setup zsh       # 也可以是 bash、fish、pwsh、powershell
 ```
 
-Windows 上二进制为 `target\release\recall.exe`，把它复制到 `PATH` 中的目录即可。
+Linux 也可以使用 `install -Dm755 target/release/recall ~/.local/bin/recall`。
+Windows 上二进制为 `target\release\recall.exe`，把它复制到 `PATH` 中的目录后运行
+`recall setup pwsh`。
 
 ### 更新
 
-```sh
+```shell
 recall update
 ```
 
@@ -75,7 +82,7 @@ SHA-256，然后替换正在运行的二进制。使用 `recall update --check` 
 
 ### 卸载
 
-```sh
+```shell
 curl -fsSL https://raw.githubusercontent.com/wendaining/recall/master/uninstall.sh | sh
 ```
 
@@ -119,7 +126,7 @@ irm https://raw.githubusercontent.com/wendaining/recall/master/uninstall.ps1 | i
 
 如果是从源码构建，请运行对应 shell 的设置命令：
 
-```sh
+```shell
 recall setup zsh       # 也可以是 bash、fish、pwsh、powershell
 ```
 
@@ -129,7 +136,7 @@ recall setup zsh       # 也可以是 bash、fish、pwsh、powershell
 
 如果只需要搜索快捷键和元数据，不希望自动启动代理：
 
-```sh
+```shell
 recall setup zsh --mode hooks
 ```
 
@@ -202,7 +209,7 @@ Mac 键盘没有 `Alt`，对应的是 `Option`（`⌥`）。recall 同时支持�
 
 在 hooks-only 或完全手动配置中，需要捕获输出时可启动被包裹的 shell：
 
-```sh
+```shell
 recall shell
 ```
 
@@ -229,7 +236,7 @@ Windows 上代理通过 ConPTY 运行 shell。未设置 `proxy.shell` 和 `--she
 
 ### 3. 导入已有历史（可选）
 
-```sh
+```shell
 recall import history zsh
 recall import history bash --path ~/archives/bash_history
 recall import history fish
@@ -257,7 +264,7 @@ recall import atuin --path /path/to/history.db
 
 其他命令：
 
-```sh
+```shell
 recall search --cmd-only   # 打印选择结果（供 shell 组件使用）
 recall setup [shell]       # 配置自动捕获和 shell hooks
 recall doctor              # 诊断配置、数据库和剪贴板
@@ -279,7 +286,7 @@ recall uuid
 
 ### 交互式配置
 
-```sh
+```shell
 recall config
 ```
 
@@ -373,7 +380,7 @@ recall 与终端无关：它使用标准 ANSI/OSC 序列，并用 crossterm 渲�
 
 ## 开发
 
-```sh
+```shell
 cargo build
 cargo test
 cargo fmt
