@@ -25,7 +25,7 @@ through a PTY.
 
 ### One-line installer (recommended)
 
-```sh
+```shell
 curl -fsSL https://raw.githubusercontent.com/wendaining/recall/master/install.sh | sh
 ```
 
@@ -40,6 +40,10 @@ checksum. It then:
   each source;
 - starts recall's PTY proxy automatically in new interactive shells without
   changing terminal-emulator settings.
+
+The installer runs `recall setup <detected-shell>` as part of this process. Open
+a new terminal when it finishes; source builds and custom installations run the
+same setup command manually.
 
 Automatic output capture is the default. Set `RECALL_PROXY_SETUP=hooks` for the
 lighter alternative that installs search and metadata hooks but only captures
@@ -65,17 +69,20 @@ It also offers to import detected shell and atuin histories. Set
 
 ### Build from source
 
-```sh
+```shell
 cargo build --release
-install -Dm755 target/release/recall ~/.local/bin/recall      # Linux/macOS
+mkdir -p ~/.local/bin
+install -m 755 target/release/recall ~/.local/bin/recall
+recall setup zsh       # or: bash, fish, pwsh, powershell
 ```
 
-On Windows the binary is `target\release\recall.exe`; copy it somewhere on
-`PATH`. Make sure the install directory is on `PATH`.
+On Linux, `install -Dm755 target/release/recall ~/.local/bin/recall` is also
+available. On Windows the binary is `target\release\recall.exe`; copy it
+somewhere on `PATH`, then run `recall setup pwsh`.
 
 ### Update
 
-```sh
+```shell
 recall update
 ```
 
@@ -87,7 +94,7 @@ an available update in its status bar.
 
 ### Uninstall
 
-```sh
+```shell
 curl -fsSL https://raw.githubusercontent.com/wendaining/recall/master/uninstall.sh | sh
 ```
 
@@ -138,7 +145,7 @@ a custom `RECALL_INSTALL_DIR`, pass the same variable to the uninstall command.
 
 If you built from source, run the setup command for your shell:
 
-```sh
+```shell
 recall setup zsh       # or: bash, fish, pwsh, powershell
 ```
 
@@ -150,7 +157,7 @@ hooks after themes, prompts, and PSReadLine are ready.
 
 For search and metadata hooks without automatic capture, use:
 
-```sh
+```shell
 recall setup zsh --mode hooks
 ```
 
@@ -229,7 +236,7 @@ keeping the search and metadata hooks.
 In hooks-only or fully manual setups, start a wrapped shell when output capture
 is needed:
 
-```sh
+```shell
 recall shell
 ```
 
@@ -263,7 +270,7 @@ Windows.
 
 ### 3. Import existing history (optional)
 
-```sh
+```shell
 recall import history zsh
 recall import history bash --path ~/archives/bash_history
 recall import history fish
@@ -292,7 +299,7 @@ inside the TUI for the full list of key bindings.
 
 Other commands:
 
-```sh
+```shell
 recall search --cmd-only   # print the selection (used by the zsh widget)
 recall setup [shell]       # configure automatic capture and shell hooks
 recall doctor              # diagnose config, databases and clipboard
@@ -316,7 +323,7 @@ recall uuid
 
 ### Interactive configuration
 
-```sh
+```shell
 recall config
 ```
 
@@ -420,7 +427,7 @@ Clipboard backends are chosen automatically: `wl-copy` (Wayland), `xclip`/`xsel`
 
 ## Development
 
-```sh
+```shell
 cargo build
 cargo test
 cargo fmt
