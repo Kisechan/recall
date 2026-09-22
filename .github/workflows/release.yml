@@ -16,8 +16,25 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  validate-version:
+    name: validate release version
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify tag matches Cargo package version
+        shell: bash
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          package_version="$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "recall") | .version')"
+          test "$package_version" = "$tag_version" || {
+            echo "release tag $GITHUB_REF_NAME does not match Cargo version $package_version" >&2
+            exit 1
+          }
+
   build:
     name: build (${{ matrix.target }})
+    needs: validate-version
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
