@@ -75,19 +75,25 @@ function Offer-HistoryImport($kind, $shell, $path, $label) {
 }
 
 function Show-Logo {
+    # Generated from docs/recall-logo.png with scripts/show-logo.sh (32x16).
     @(
-        '             .-=================-.'
-        "          .-'                     ``-."
-        "        .'       +----------+        ``."
-        '       /        /    >_      \         \'
-        '      ;        |      _       |         ;'
-        '      |        |              |         |'
-        '      ;        |              |         ;'
-        '       \        \            /         /'
-        "        ``.       +----------+        .'"
-        "          ``-.                     _.-'"
-        "             ``-=================-'"
-    ) | ForEach-Object { Write-Host $_ }
+        ''
+        ''
+        ''
+        '        ▂  ▂▄▆▆▇▇▆▆▄▂'
+        '       ▐█▅█▛▀▀▔▔▔▔▔▀▜█▄'
+        '       ▐███▙▅▇████▇▄▁▝▜█▖'
+        '        ▔ ▗█▛████████▖ ▜█'
+        '          ███▄▀███████ ▐█▍'
+        '      ▕█▌ ██▛▚▆███████ ▐█▍'
+        '       ▜█▖▝██████████▘▗█▛'
+        '        ▜█▄ ▀▜████▛▀ ▄█▛'
+        '         ▝▜█▅▄▃▂▂▃▄▆█▛▀'
+        '           ▔▀▀▀▀▀▀▀▀▔'
+        ''
+        ''
+        ''
+    ) | ForEach-Object { Write-Host $_ -ForegroundColor Cyan }
 }
 
 Show-Logo
