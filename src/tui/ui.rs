@@ -6,6 +6,7 @@ use ratatui::widgets::{Block, Clear, List, ListItem, Paragraph, Wrap};
 use unicode_width::UnicodeWidthStr;
 
 use crate::model::{Block as RecallBlock, BlockKind};
+use crate::tui::ansi;
 use crate::tui::app::{App, Focus};
 use crate::util;
 
@@ -217,10 +218,7 @@ fn detail_text(block: &RecallBlock, config: &crate::config::Config) -> Text<'sta
 
     match &block.output {
         Some(output) => {
-            let text = String::from_utf8_lossy(output);
-            for line in text.lines() {
-                lines.push(Line::raw(line.to_string()));
-            }
+            lines.extend(ansi::styled_lines(output));
         }
         None => lines.push(Line::from(Span::styled(
             format!("[{}]", kind_label(block.kind)),
